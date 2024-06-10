@@ -1,0 +1,74 @@
+
+				CODIGO FONTE , BASICO SENSORES E RELES (DOIS SENSORES E DOIS RELES)
+
+#include <math.h>
+
+const int sensor1Pin = A0;
+const int sensor2Pin = A1;
+const int relay1Pin = 12;
+const int relay2Pin = 13;
+const int seriesResistor = 10000; // Resistor em série de 10K ohms
+
+// Coeficientes de Steinhart-Hart para o NTC 10K
+const double A = 1.009249522e-03;
+const double B = 2.378405444e-04;
+const double C = 2.019202697e-07;
+
+// Função para ler a temperatura de um sensor
+double readTemperature(int pin, bool &success) {
+  int analogValue = analogRead(pin);
+  if (analogValue == 0 || analogValue == 1023) {
+    success = false; // Leituras 0 ou 1023 são inválidas
+    return 0;
+  }
+  
+  double resistance = (1023.0 / analogValue - 1) * seriesResistor;
+  double logR = log(resistance);
+  double invT = A + B * logR + C * logR * logR * logR;
+  double temperatureK = 1.0 / invT;
+  double temperatureC = temperatureK - 273.15; // Converte Kelvin para Celsius
+  
+  success = true;
+  return temperatureC;
+}
+
+void setup() {
+  pinMode(sensor1Pin, INPUT);
+  pinMode(sensor2Pin, INPUT);
+  pinMode(relay1Pin, OUTPUT);
+  pinMode(relay2Pin, OUTPUT);
+
+  digitalWrite(relay1Pin, LOW); // Garante que o relé 1 começa desligado
+  digitalWrite(relay2Pin, LOW); // Garante que o relé 2 começa desligado
+
+  Serial.begin(9600); // Inicializa a comunicação serial
+}
+
+void loop() {
+  bool sensor1Success, sensor2Success;
+  
+  double temperature1 = readTemperature(sensor1Pin, sensor1Success);
+  double temperature2 = readTemperature(sensor2Pin, sensor2Success);
+
+  if (sensor1Success) {
+    Serial.print("Sensor 01: ");
+    Serial.print(temperature1);
+    Serial.println(" ºC");
+    digitalWrite(relay1Pin, LOW); // Aciona o relé 1
+  } else {
+    digitalWrite(relay1Pin, HIGH); // Desliga o relé 1
+    Serial.println("Erro: Sensor 01");
+  }
+
+  if (sensor2Success) {
+    Serial.print("Sensor 02: ");
+    Serial.print(temperature2);
+    Serial.println(" ºC");
+    digitalWrite(relay2Pin, LOW); // Aciona o relé 2
+  } else {
+    digitalWrite(relay2Pin, HIGH); // Desliga o relé 2
+    Serial.println("Erro: Sensor 02");
+  }
+
+  delay(1000); // Aguarda 1 segundo antes de fazer a próxima leitura
+}
